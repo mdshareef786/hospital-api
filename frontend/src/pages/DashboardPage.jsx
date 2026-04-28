@@ -75,28 +75,28 @@ export default function DashboardPage() {
 
       <div className="stat-grid">
         <div className="stat-card">
-          <div className="stat-icon">👨‍⚕️</div>
+          <div className="stat-icon"></div>
           <div>
             <div className="stat-label">Total Doctors</div>
             <div className="stat-value">{stats.doctors}</div>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">🏥</div>
+          <div className="stat-icon"></div>
           <div>
             <div className="stat-label">Total Patients</div>
             <div className="stat-value">{stats.patients}</div>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">📅</div>
+          <div className="stat-icon"></div>
           <div>
             <div className="stat-label">Appointments</div>
             <div className="stat-value">{stats.appointments}</div>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">⏳</div>
+          <div className="stat-icon"></div>
           <div>
             <div className="stat-label">Scheduled</div>
             <div className="stat-value" style={{ color: 'var(--info)' }}>{stats.scheduled}</div>
@@ -110,7 +110,7 @@ export default function DashboardPage() {
           <span className="text-muted">Last 5</span>
         </div>
         {recentAppointments.length === 0 ? (
-          <div className="empty-state"><div className="icon">📅</div><div>No appointments yet</div></div>
+          <div className="empty-state"><div className="icon"></div><div>No appointments yet</div></div>
         ) : (
           <div className="table-wrap">
             <table>

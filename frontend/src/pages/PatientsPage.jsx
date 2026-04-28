@@ -128,7 +128,7 @@ function ReportsModal({ patient, onClose }) {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 580 }}>
         <div className="modal-header">
-          <h2 className="modal-title">📁 Reports — {patient.name}</h2>
+          <h2 className="modal-title"> Reports — {patient.name}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <div className="modal-body">
@@ -146,12 +146,12 @@ function ReportsModal({ patient, onClose }) {
           </div>
 
           {reports.length === 0 ? (
-            <div className="empty-state"><div className="icon">📄</div><div>No reports uploaded yet</div></div>
+            <div className="empty-state"><div className="icon"></div><div>No reports uploaded yet</div></div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {reports.map(r => (
                 <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#fff', border: '1px solid var(--border)', borderRadius: 8 }}>
-                  <span style={{ fontSize: '1.4rem' }}>📄</span>
+                  <span style={{ fontSize: '1.4rem' }}></span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 500, fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.original_filename}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -218,9 +218,9 @@ export default function PatientsPage() {
 
       <div className="card">
         {loading ? (
-          <div className="empty-state"><div className="icon">⏳</div>Loading...</div>
+          <div className="empty-state"><div className="icon"></div>Loading...</div>
         ) : data.items.length === 0 ? (
-          <div className="empty-state"><div className="icon">🏥</div><div>No patients found</div></div>
+          <div className="empty-state"><div className="icon"></div><div>No patients found</div></div>
         ) : (
           <div className="table-wrap">
             <table>
@@ -238,7 +238,7 @@ export default function PatientsPage() {
                     <td>
                       <div className="flex gap-2">
                         <button className="btn btn-sm btn-ghost" onClick={() => setModal(p)}>Edit</button>
-                        <button className="btn btn-sm btn-ghost" onClick={() => setReportsModal(p)}>📁 Reports</button>
+                        <button className="btn btn-sm btn-ghost" onClick={() => setReportsModal(p)}>Reports</button>
                         <button className="btn btn-sm btn-danger" onClick={() => handleDelete(p.id)}>Del</button>
                       </div>
                     </td>

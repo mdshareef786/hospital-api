@@ -140,9 +140,9 @@ export default function DoctorsPage() {
 
       <div className="card">
         {loading ? (
-          <div className="empty-state"><div className="icon">⏳</div>Loading...</div>
+          <div className="empty-state"><div className="icon"></div>Loading...</div>
         ) : data.items.length === 0 ? (
-          <div className="empty-state"><div className="icon">👨‍⚕️</div><div>No doctors found</div></div>
+          <div className="empty-state"><div className="icon"></div><div>No doctors found</div></div>
         ) : (
           <div className="table-wrap">
             <table>

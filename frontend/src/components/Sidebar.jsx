@@ -3,11 +3,11 @@ import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { section: 'Overview' },
-  { path: '/', icon: '📊', label: 'Dashboard' },
+  { path: '/', label:'Dashboard' },
   { section: 'Management' },
-  { path: '/doctors', icon: '👨‍⚕️', label: 'Doctors' },
-  { path: '/patients', icon: '🏥', label: 'Patients' },
-  { path: '/appointments', icon: '📅', label: 'Appointments' },
+  { path: '/doctors', label:'Doctors' },
+  { path: '/patients', label:'Patients' },
+  { path: '/appointments', label:'Appointments' },
 ];
 
 export default function Sidebar() {

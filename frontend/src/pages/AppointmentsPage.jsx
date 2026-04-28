@@ -37,7 +37,7 @@ function AppointmentModal({ onClose, onSave }) {
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h2 className="modal-title">📅 Book Appointment</h2>
+          <h2 className="modal-title"> Book Appointment</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit}>
@@ -174,9 +174,9 @@ export default function AppointmentsPage() {
 
       <div className="card">
         {loading ? (
-          <div className="empty-state"><div className="icon">⏳</div>Loading...</div>
+          <div className="empty-state"><div className="icon"></div>Loading...</div>
         ) : data.items.length === 0 ? (
-          <div className="empty-state"><div className="icon">📅</div><div>No appointments found</div></div>
+          <div className="empty-state"><div className="icon"></div><div>No appointments found</div></div>
         ) : (
           <div className="table-wrap">
             <table>
