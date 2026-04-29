@@ -5,7 +5,8 @@ import { useAuth } from '../context/AuthContext';
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ username: '', password: '' });
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,10 +15,15 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(form.username, form.password);
+      await login(username, password);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed. Please try again.');
+      const detail = err.response?.data?.detail;
+      if (typeof detail === 'string') {
+        setError(detail);
+      } else {
+        setError('Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
@@ -27,7 +33,7 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">
-          <h1> <span>MedCore</span></h1>
+          <h1>🏥 <span>MedCore</span></h1>
           <p>Hospital Management System</p>
         </div>
 
@@ -38,8 +44,8 @@ export default function LoginPage() {
               className="form-input"
               type="text"
               placeholder="Enter username"
-              value={form.username}
-              onChange={e => setForm({ ...form, username: e.target.value })}
+              value={username}
+              onChange={e => setUsername(e.target.value)}
               required
             />
           </div>
@@ -50,8 +56,8 @@ export default function LoginPage() {
               className="form-input"
               type="password"
               placeholder="Enter password"
-              value={form.password}
-              onChange={e => setForm({ ...form, password: e.target.value })}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
               required
             />
           </div>
@@ -62,7 +68,8 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
+          <button className="btn btn-primary" type="submit" disabled={loading}
+            style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>

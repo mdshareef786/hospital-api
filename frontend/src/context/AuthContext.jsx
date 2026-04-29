@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { login as apiLogin } from '../services/api';
+import { createContext, useContext, useState } from 'react';
+import axios from 'axios';
 
 const AuthContext = createContext(null);
 
@@ -11,7 +11,14 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('token'));
 
   const login = async (username, password) => {
-    const res = await apiLogin({ username, password });
+    const params = new URLSearchParams();
+    params.append('username', username);
+    params.append('password', password);
+
+    const res = await axios.post('http://localhost:8000/auth/login', params, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+
     const { access_token, user: userData } = res.data;
     localStorage.setItem('token', access_token);
     localStorage.setItem('user', JSON.stringify(userData));
