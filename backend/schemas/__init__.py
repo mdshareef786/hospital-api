@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional, List, Generic, TypeVar
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, List, Any
 from datetime import datetime
 from enum import Enum
 
@@ -13,21 +13,11 @@ class UserRole(str, Enum):
 
 
 class AppointmentStatus(str, Enum):
-    pending = "pending"
-    approved = "approved"
-    rejected = "rejected"
-    completed = "completed"
-    cancelled = "cancelled"
-
-
-# ─── Standard API Response ─────────────────────────────────────────────────────
-
-T = TypeVar("T")
-
-class APIResponse(BaseModel, Generic[T]):
-    status: str
-    message: str
-    data: Optional[T]
+    pending = "Pending"
+    approved = "Approved"
+    rejected = "Rejected"
+    completed = "Completed"
+    cancelled = "Cancelled"
 
 
 # ─── Auth Schemas ──────────────────────────────────────────────────────────────
@@ -36,7 +26,7 @@ class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=6)
-    role: UserRole
+    role: UserRole = UserRole.admin
 
 
 class UserResponse(BaseModel):
@@ -81,7 +71,7 @@ class DoctorBase(BaseModel):
 
 
 class DoctorCreate(DoctorBase):
-    user_id: int   # 🔥 important for linking user
+    pass
 
 
 class DoctorUpdate(BaseModel):
@@ -94,10 +84,9 @@ class DoctorUpdate(BaseModel):
 
 class DoctorResponse(DoctorBase):
     id: int
-    user_id: int
     is_active: bool
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -114,24 +103,23 @@ class PatientBase(BaseModel):
 
 
 class PatientCreate(PatientBase):
-    user_id: int   # 🔥 important
+    pass
 
 
 class PatientUpdate(BaseModel):
-    name: Optional[str]
-    age: Optional[int]
-    phone: Optional[str]
-    email: Optional[EmailStr]
-    address: Optional[str]
-    is_active: Optional[bool]
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
+    age: Optional[int] = Field(None, gt=0, lt=150)
+    phone: Optional[str] = Field(None, min_length=7, max_length=20)
+    email: Optional[EmailStr] = None
+    address: Optional[str] = None
+    is_active: Optional[bool] = None
 
 
 class PatientResponse(PatientBase):
     id: int
-    user_id: int
     is_active: bool
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -145,17 +133,11 @@ class AppointmentCreate(BaseModel):
     appointment_date: datetime
     notes: Optional[str] = None
 
-    @validator("appointment_date")
-    def validate_future_date(cls, value):
-        if value < datetime.utcnow():
-            raise ValueError("Appointment must be in the future")
-        return value
-
 
 class AppointmentUpdate(BaseModel):
-    appointment_date: Optional[datetime]
-    status: Optional[AppointmentStatus]
-    notes: Optional[str]
+    appointment_date: Optional[datetime] = None
+    status: Optional[AppointmentStatus] = None
+    notes: Optional[str] = None
 
 
 class AppointmentResponse(BaseModel):
@@ -164,23 +146,13 @@ class AppointmentResponse(BaseModel):
     patient_id: int
     appointment_date: datetime
     status: AppointmentStatus
-    notes: Optional[str]
+    notes: Optional[str] = None
     created_at: datetime
-
-    doctor: Optional[DoctorResponse]
-    patient: Optional[PatientResponse]
+    doctor: Optional[DoctorResponse] = None
+    patient: Optional[PatientResponse] = None
 
     class Config:
         from_attributes = True
-
-
-# ─── Pagination Schema ─────────────────────────────────────────────────────────
-
-class PaginatedResponse(BaseModel, Generic[T]):
-    total: int
-    page: int
-    page_size: int
-    data: List[T]
 
 
 # ─── Report Schemas ────────────────────────────────────────────────────────────
@@ -190,9 +162,9 @@ class ReportResponse(BaseModel):
     patient_id: int
     filename: str
     original_filename: str
-    file_size: int
-    content_type: str
-    description: Optional[str]
+    file_size: Optional[int] = None
+    content_type: Optional[str] = None
+    description: Optional[str] = None
     uploaded_at: datetime
 
     class Config:
