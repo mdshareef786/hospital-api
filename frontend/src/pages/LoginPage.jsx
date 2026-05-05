@@ -27,8 +27,7 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">
-          <h1>🏥 <span>MedCore</span></h1>
-          <p>Hospital Management System</p>
+          <h1><span>MedCore Hospital</span></h1>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -67,9 +66,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div style={{ marginTop: 20, padding: '12px', background: '#f0fdf4', borderRadius: 8, fontSize: '0.8rem', color: '#065f46' }}>
         </div>
       </div>
-    </div>
   );
 }
