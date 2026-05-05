@@ -2,20 +2,20 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import sys, os
+import sys
+import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from main import app
 from database import get_db, Base
-from models import User, UserRole
+from models import User
 from services.auth import get_password_hash
 
-# DB setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(bind=engine)
+# Test DB
+TEST_DB_URL = "sqlite:///./test_hospital.db"
+engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def override_get_db():
@@ -33,27 +33,17 @@ app.dependency_overrides[get_db] = override_get_db
 def setup_db():
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
-
-    admin = User(
-        username="admin",
-        email="admin@test.com",
-        hashed_password=get_password_hash("admin123"),
-        role=UserRole.admin
-    )
-
-    patient_user = User(
-        username="patient",
-        email="patient@test.com",
-        hashed_password=get_password_hash("patient123"),
-        role=UserRole.patient
-    )
-
-    db.add_all([admin, patient_user])
-    db.commit()
+    if not db.query(User).filter(User.username == "testadmin").first():
+        admin = User(
+            username="testadmin",
+            email="testadmin@hospital.com",
+            hashed_password=get_password_hash("test123"),
+            role="admin"
+        )
+        db.add(admin)
+        db.commit()
     db.close()
-
     yield
-
     Base.metadata.drop_all(bind=engine)
 
 
@@ -62,116 +52,183 @@ def client():
     return TestClient(app)
 
 
-def get_token(client, username, password):
-    response = client.post(
-        "/auth/login",
-        data={"username": username, "password": password}
-    )
-    return response.json()["data"]["access_token"]
-
-
 @pytest.fixture
-def admin_headers(client):
-    token = get_token(client, "admin", "admin123")
+def auth_headers(client):
+    # Use form data instead of JSON
+    response = client.post("/auth/login", data={
+        "username": "testadmin",
+        "password": "test123"
+    })
+    data = response.json()
+    # Handle both { access_token } and { data: { access_token } }
+    payload = data.get("data") or data
+    token = payload.get("access_token")
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.fixture
-def patient_headers(client):
-    token = get_token(client, "patient", "patient123")
-    return {"Authorization": f"Bearer {token}"}
+# ─── Auth Tests ───────────────────────────────────────────────────────────────
+
+def test_login_success(client):
+    response = client.post("/auth/login", data={
+        "username": "testadmin",
+        "password": "test123"
+    })
+    assert response.status_code == 200
 
 
-# ─── AUTH ─────────────────────────────────────
+def test_login_wrong_password(client):
+    response = client.post("/auth/login", data={
+        "username": "testadmin",
+        "password": "wrong"
+    })
+    assert response.status_code == 401
 
-def test_login(client):
-    res = client.post("/auth/login", data={"username": "admin", "password": "admin123"})
-    assert res.status_code == 200
-    assert "access_token" in res.json()["data"]
+
+def test_protected_route_without_token(client):
+    response = client.get("/doctors")
+    assert response.status_code == 401
 
 
-# ─── DOCTOR ───────────────────────────────────
+# ─── Doctor Tests ─────────────────────────────────────────────────────────────
 
-def test_create_doctor(client, admin_headers):
-    res = client.post("/doctors", json={
-        "name": "Dr A",
+def test_create_doctor(client, auth_headers):
+    response = client.post("/doctors", json={
+        "name": "Dr. Smith",
         "specialization": "Cardiology",
-        "email": "a@test.com",
-        "user_id": 1
-    }, headers=admin_headers)
-
-    assert res.status_code == 200
+        "email": "smith@hospital.com"
+    }, headers=auth_headers)
+    assert response.status_code == 201
 
 
-def test_list_doctors(client, admin_headers):
-    res = client.get("/doctors", headers=admin_headers)
-    assert res.status_code == 200
-    assert "data" in res.json()
+def test_create_doctor_invalid_email(client, auth_headers):
+    response = client.post("/doctors", json={
+        "name": "Dr. Bad",
+        "specialization": "Cardiology",
+        "email": "not-an-email"
+    }, headers=auth_headers)
+    assert response.status_code == 422
 
 
-# ─── PATIENT ──────────────────────────────────
+def test_list_doctors(client, auth_headers):
+    client.post("/doctors", json={
+        "name": "Dr. Jones",
+        "specialization": "Neurology",
+        "email": "jones@hospital.com"
+    }, headers=auth_headers)
+    response = client.get("/doctors", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["data"]["total"] >= 1
 
-def test_create_patient(client, patient_headers):
-    res = client.post("/patients", json={
-        "name": "John",
-        "age": 30,
-        "phone": "9999999999",
-        "user_id": 2
-    }, headers=patient_headers)
 
-    assert res.status_code == 200
+def test_get_doctor_not_found(client, auth_headers):
+    response = client.get("/doctors/9999", headers=auth_headers)
+    assert response.status_code == 404
 
 
-# ─── APPOINTMENT ──────────────────────────────
-
-def test_create_appointment(client, admin_headers, patient_headers):
-
-    doc = client.post("/doctors", json={
-        "name": "Dr B",
+def test_update_doctor(client, auth_headers):
+    create = client.post("/doctors", json={
+        "name": "Dr. Update",
         "specialization": "General",
-        "email": "b@test.com",
-        "user_id": 1
-    }, headers=admin_headers).json()["data"]
+        "email": "update@hospital.com"
+    }, headers=auth_headers)
+    doctor_id = create.json()["data"]["id"]
+    response = client.put(f"/doctors/{doctor_id}", json={
+        "specialization": "Oncology"
+    }, headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json()["data"]["specialization"] == "Oncology"
+
+
+def test_toggle_doctor_status(client, auth_headers):
+    create = client.post("/doctors", json={
+        "name": "Dr. Toggle",
+        "specialization": "General",
+        "email": "toggle@hospital.com"
+    }, headers=auth_headers)
+    doctor_id = create.json()["data"]["id"]
+    response = client.patch(f"/doctors/{doctor_id}/toggle-status",
+                           headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json()["data"]["is_active"] is False
+
+
+# ─── Patient Tests ────────────────────────────────────────────────────────────
+
+def test_create_patient(client, auth_headers):
+    response = client.post("/patients", json={
+        "name": "John Doe",
+        "age": 35,
+        "phone": "9876543210"
+    }, headers=auth_headers)
+    assert response.status_code == 201
+    assert response.json()["data"]["name"] == "John Doe"
+
+
+def test_create_patient_invalid_age(client, auth_headers):
+    response = client.post("/patients", json={
+        "name": "Bad Patient",
+        "age": -1,
+        "phone": "1234567890"
+    }, headers=auth_headers)
+    assert response.status_code == 422
+
+
+def test_search_patient(client, auth_headers):
+    client.post("/patients", json={
+        "name": "Alice Wonder",
+        "age": 28,
+        "phone": "1111111111"
+    }, headers=auth_headers)
+    response = client.get("/patients?search=Alice", headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json()["data"]["total"] >= 1
+
+
+# ─── Appointment Tests ────────────────────────────────────────────────────────
+
+def test_create_appointment(client, auth_headers):
+    doc = client.post("/doctors", json={
+        "name": "Dr. Appt",
+        "specialization": "General",
+        "email": "appt.doc@hospital.com"
+    }, headers=auth_headers).json()["data"]
 
     pat = client.post("/patients", json={
-        "name": "Patient A",
-        "age": 25,
-        "phone": "8888888888",
-        "user_id": 2
-    }, headers=patient_headers).json()["data"]
+        "name": "Appt Patient",
+        "age": 40,
+        "phone": "2222222222"
+    }, headers=auth_headers).json()["data"]
 
-    res = client.post("/appointments", json={
+    response = client.post("/appointments", json={
         "doctor_id": doc["id"],
         "patient_id": pat["id"],
-        "appointment_date": "2099-01-01T10:00:00"
-    }, headers=patient_headers)
+        "appointment_date": "2099-12-01T10:00:00"
+    }, headers=auth_headers)
+    assert response.status_code == 201
+    assert response.json()["data"]["status"] == "Pending"
 
-    assert res.status_code == 200
-    assert res.json()["data"]["status"] == "pending"
 
-
-def test_cancel_appointment(client, admin_headers, patient_headers):
-
+def test_cancel_appointment(client, auth_headers):
     doc = client.post("/doctors", json={
-        "name": "Dr C",
+        "name": "Dr. Cancel",
         "specialization": "General",
-        "email": "c@test.com",
-        "user_id": 1
-    }, headers=admin_headers).json()["data"]
+        "email": "cancel.doc@hospital.com"
+    }, headers=auth_headers).json()["data"]
 
     pat = client.post("/patients", json={
-        "name": "Patient B",
-        "age": 28,
-        "phone": "7777777777",
-        "user_id": 2
-    }, headers=patient_headers).json()["data"]
+        "name": "Cancel Patient",
+        "age": 30,
+        "phone": "3333333333"
+    }, headers=auth_headers).json()["data"]
 
     appt = client.post("/appointments", json={
         "doctor_id": doc["id"],
         "patient_id": pat["id"],
-        "appointment_date": "2099-01-01T11:00:00"
-    }, headers=patient_headers).json()["data"]
+        "appointment_date": "2099-11-01T09:00:00"
+    }, headers=auth_headers).json()["data"]
 
-    res = client.patch(f"/appointments/{appt['id']}/cancel", headers=patient_headers)
-
-    assert res.status_code == 200
+    response = client.patch(f"/appointments/{appt['id']}/cancel",
+                           headers=auth_headers)
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "Cancelled"
