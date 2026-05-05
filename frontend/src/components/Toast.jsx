@@ -7,25 +7,15 @@ export function ToastProvider({ children }) {
 
   const addToast = useCallback((message, type = 'info') => {
     const id = Date.now();
-
     setToasts(prev => [...prev, { id, message, type }]);
-
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4000);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
   }, []);
 
-  const icons = {
-    success: '✅',
-    error: '❌',
-    info: 'ℹ️',
-    warning: '⚠️'
-  };
+  const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
 
   return (
     <ToastContext.Provider value={addToast}>
       {children}
-
       <div className="toast-container">
         {toasts.map(t => (
           <div key={t.id} className={`toast ${t.type}`}>
@@ -38,12 +28,4 @@ export function ToastProvider({ children }) {
   );
 }
 
-export const useToast = () => {
-  const context = useContext(ToastContext);
-
-  if (!context) {
-    throw new Error("useToast must be used inside ToastProvider");
-  }
-
-  return context;
-};
+export const useToast = () => useContext(ToastContext);
