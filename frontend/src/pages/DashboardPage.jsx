@@ -26,16 +26,18 @@ export default function DashboardPage() {
   }, []);
 
   const STATUS_BADGE = {
-    Pending: 'badge-warning', Approved: 'badge-info',
-    Rejected: 'badge-danger', Completed: 'badge-success', Cancelled: 'badge-gray'
+    Pending: 'badge-warning',
+    Approved: 'badge-info',
+    Rejected: 'badge-danger',
+    Completed: 'badge-success',
+    Cancelled: 'badge-gray'
   };
 
   return (
     <div className="page-body">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="section-title">Dashboard</h2>
-          <p className="text-muted">Welcome back! Here's your hospital overview.</p>
+          <h2 className="section-title">MedCore Hospital</h2>
         </div>
         <div style={{ position: 'relative' }}>
           <button className="notif-btn" onClick={() => setShowNotifs(!showNotifs)}>
