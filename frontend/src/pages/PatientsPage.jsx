@@ -236,4 +236,4 @@ export default function PatientsPage() {
       {reportsModal && <ReportsModal patient={reportsModal} onClose={() => setReportsModal(null)} />}
     </div>
   );
-}
+}         
