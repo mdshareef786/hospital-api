@@ -9,27 +9,35 @@ A full-stack hospital management application built with **FastAPI** (Python) + *
 ```
 hospital-management/
 ├── backend/
-│   ├── main.py                 # FastAPI app entry point
-│   ├── database.py             # SQLAlchemy DB setup
-│   ├── config.py               # Environment settings
+│   ├── main.py                      # FastAPI app entry point
+│   ├── database.py                  # SQLAlchemy DB setup
+│   ├── config.py                    # Environment settings
 │   ├── requirements.txt
-│   ├── .env                    # Environment variables
+│   ├── .env                         # Environment variables
 │   ├── models/
-│   │   └── __init__.py         # SQLAlchemy ORM models
+│   │   └── __init__.py              # SQLAlchemy ORM models
 │   ├── schemas/
-│   │   └── __init__.py         # Pydantic schemas
+│   │   └── __init__.py              # Pydantic schemas
 │   ├── routers/
-│   │   ├── auth.py             # Login / Register
-│   │   ├── doctors.py          # Doctor CRUD
-│   │   ├── patients.py         # Patient CRUD
-│   │   ├── appointments.py     # Appointment management
-│   │   ├── reports.py          # File upload/download
-│   │   └── websockets.py       # WebSocket endpoints
+│   │   ├── auth.py                  # Login / Register / Forgot Password
+│   │   ├── doctors.py               # Doctor CRUD
+│   │   ├── patients.py              # Patient CRUD
+│   │   ├── appointments.py          # Appointment management
+│   │   ├── reports.py               # File upload/download
+│   │   └── websockets.py            # WebSocket endpoints
 │   ├── services/
-│   │   ├── auth.py             # JWT utilities
-│   │   └── websocket_manager.py # WS connection manager
+│   │   ├── auth.py                  # JWT utilities
+│   │   ├── auth_service.py          # Auth business logic + RBAC
+│   │   ├── doctor_service.py        # Doctor business logic + Cache
+│   │   ├── patient_service.py       # Patient business logic
+│   │   ├── appointment_service.py   # Appointment + double booking prevention
+│   │   └── websocket_manager.py     # WS connection manager
+│   ├── utils/
+│   │   ├── response.py              # Standard API response format
+│   │   ├── cache.py                 # In-memory cache
+│   │   └── exceptions.py            # Global exception handlers
 │   └── tests/
-│       └── test_api.py         # Pytest test suite
+│       └── test_api.py              # Pytest test suite
 │
 └── frontend/
     ├── index.html
@@ -54,62 +62,38 @@ hospital-management/
             ├── PatientsPage.jsx
             └── AppointmentsPage.jsx
 ```
-
 ---
 
 ## ⚙️ Backend Setup
 
 ### Prerequisites
-- Python 3.9+ (tested on 3.14.3)
+- Python 3.11 (recommended)
 - pip
+- Node.js 18+
 
 ### Installation
 
 ```bash
 cd backend
-
-# Create virtual environment
-python -m venv .venv
-
-# Activate (Windows)
+py -3.11 -m venv .venv
 .venv\Scripts\activate
-
-# Activate (Mac/Linux)
-source .venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Start the server
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload
 ```
 
-The API will start at **http://localhost:8000**
-
+API starts at **http://localhost:8000**
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
-**Default admin credentials created on first run:**
-- Username: `admin`
-- Password: `admin123`
+**Default credentials:** Username: `admin` | Password: `admin123`
 
 ---
 
 ## 🖥️ Frontend Setup
 
-### Prerequisites
-- Node.js 18+
-- npm
-
-### Installation
-
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start dev server
 npm run dev
 ```
 
@@ -125,33 +109,35 @@ Frontend runs at **http://localhost:3000**
 | POST | `/auth/register` | Register new user |
 | POST | `/auth/login` | Login & get JWT token |
 | GET | `/auth/me` | Get current user |
+| POST | `/auth/forgot-password` | Request password reset token |
+| POST | `/auth/reset-password` | Reset password using token |
 
 ### 👨‍⚕️ Doctors
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/doctors` | Create doctor |
-| GET | `/doctors` | List doctors (pagination, search, filter) |
+| POST | `/doctors` | Create doctor (Admin only) |
+| GET | `/doctors` | List doctors (pagination, search, sort, filter) |
 | GET | `/doctors/{id}` | Get doctor by ID |
-| PUT | `/doctors/{id}` | Update doctor |
-| DELETE | `/doctors/{id}` | Delete doctor |
-| PATCH | `/doctors/{id}/toggle-status` | Activate/Deactivate |
+| PUT | `/doctors/{id}` | Update doctor (Admin only) |
+| DELETE | `/doctors/{id}` | Delete doctor (Admin only) |
+| PATCH | `/doctors/{id}/toggle-status` | Activate/Deactivate (Admin only) |
 
 ### 🏥 Patients
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/patients` | Create patient |
-| GET | `/patients` | List patients (pagination, search) |
+| POST | `/patients` | Create patient (Admin/Doctor) |
+| GET | `/patients` | List patients (pagination, search, sort) |
 | GET | `/patients/{id}` | Get patient by ID |
-| PUT | `/patients/{id}` | Update patient |
-| DELETE | `/patients/{id}` | Delete patient |
+| PUT | `/patients/{id}` | Update patient (Admin/Doctor) |
+| DELETE | `/patients/{id}` | Delete patient (Admin only) |
 
 ### 📅 Appointments
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/appointments` | Book appointment |
-| GET | `/appointments` | List appointments (filter by doctor/patient/status) |
+| GET | `/appointments` | List (filter by doctor/patient/status/date) |
 | GET | `/appointments/{id}` | Get appointment |
-| PUT | `/appointments/{id}` | Update appointment |
+| PUT | `/appointments/{id}` | Update appointment (Admin/Doctor) |
 | PATCH | `/appointments/{id}/cancel` | Cancel appointment |
 
 ### 📁 Patient Reports
@@ -172,20 +158,29 @@ Frontend runs at **http://localhost:3000**
 
 ## ✅ Features
 
-- **JWT Authentication** — secure token-based login, protected routes
-- **Role-based access** — Admin / Doctor roles
-- **Doctor Management** — Full CRUD, activate/deactivate, filter by specialization
-- **Patient Management** — Full CRUD, search by name/phone
-- **Appointments** — Book, update status (Scheduled/Completed/Cancelled), cancel
-- **Real-time WebSockets** — Doctor gets notified when appointment is booked; admin dashboard gets all updates
-- **File Uploads** — Upload patient reports (PDF, images, docs), download, delete
-- **Pagination** — All listing APIs support page & page_size
-- **Search & Filtering** — Doctors by name/specialization, patients by name/phone, appointments by status
-- **Rate Limiting** — 200 requests/minute per IP (slowapi)
-- **Logging** — All requests and errors logged to console + `hospital.log`
-- **Background Tasks** — WebSocket notifications sent as FastAPI background tasks
-- **Pydantic Validation** — Email format, age > 0, required fields, etc.
-- **SQLite + SQLAlchemy ORM** — Easy to swap to MySQL/PostgreSQL
+### v1.0
+- JWT Authentication — secure token-based login, protected routes
+- Doctor Management — Full CRUD, activate/deactivate, filter by specialization
+- Patient Management — Full CRUD, search by name/phone
+- Appointments — Book, update status, cancel
+- Real-time WebSockets — Live appointment notifications
+- File Uploads — Upload patient reports (PDF, images, docs), download, delete
+- Pagination — All listing APIs support page & page_size
+- Rate Limiting — 200 requests/minute per IP
+- Logging — All requests logged to console + hospital.log
+- Background Tasks — WebSocket notifications via FastAPI BackgroundTasks
+- Pytest Tests — 14 tests covering all major APIs
+
+### v2.0 (Latest)
+- Forgot Password — Token-based password reset flow
+- Role-Based Access Control — Admin / Doctor / Patient roles
+- New Appointment Statuses — Pending / Approved / Rejected / Completed / Cancelled
+- Double Booking Prevention — 30-minute slot validation per doctor
+- Service Layer Architecture — All business logic moved to services folder
+- Sorting — All listing APIs support sort_by and sort_order=asc/desc
+- Standard API Response Format — { success, message, data, errors } on every API
+- Global Exception Handler — Clean consistent error responses
+- In-Memory Caching — Doctor list cached for 60 seconds, auto-invalidated
 
 ---
 
@@ -200,7 +195,7 @@ Tests cover: auth login/register, doctor CRUD, patient CRUD, appointment booking
 
 ---
 
-## 🌍 Environment Variables (`.env`)
+## 🌍 Environment Variables (.env)
 
 ```env
 SECRET_KEY=your-super-secret-key-min-32-chars
@@ -215,7 +210,6 @@ MAX_UPLOAD_SIZE_MB=10
 
 ## 🐳 Docker (Optional)
 
-### Backend Dockerfile
 ```dockerfile
 FROM python:3.11-slim
 WORKDIR /app
@@ -225,26 +219,10 @@ COPY . .
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-### docker-compose.yml
-```yaml
-version: "3.9"
-services:
-  backend:
-    build: ./backend
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-```
-
 ---
 
 ## 📸 API Testing
 
-Use the interactive **Swagger UI** at http://localhost:8000/docs to test all endpoints directly in the browser. Click **Authorize** and enter your Bearer token after logging in.
+Use **Swagger UI** at http://localhost:8000/docs
+Click **Authorize** → enter username: `admin` password: `admin123` → test all endpoints directly in browser.
+
